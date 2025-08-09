@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conversor Arábigo → Maya</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+      :root { --scale: 1; }
+      .maya-level { transform: scale(var(--scale)); transform-origin: top left; }
+    .maya-level {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 5px;
+      background: white;
+      min-width: 120px;
+    }
+    .dot {
+      width: 14px; height: 14px; border-radius: 9999px; background: currentColor; display: inline-block;
+    }
+    .bar {
+      width: 84px; height: 12px; border-radius: 8px; background: currentColor; display: inline-block;
+    }
+    .shell {
+      width: 88px; height: 44px; border-radius: 100%;
+      border: 4px solid currentColor; position: relative; box-sizing: border-box;
+      background: white;
+      box-shadow: 0px 5px 0px rgba(255, 255, 255, 0.99), 0px 7px 0px 3px rgba(0, 0, 0, 1);
+    }
+    .shell:before {
+      content: ""; position: absolute; left: 14px; width: 4px; height: 35px; top: 0px;
+      background: currentColor; border-radius: 2px;
+    }
+    .shell:after {
+      content: ""; position: absolute; right: 14px; width: 4px; height: 35px; top: 0px;
+      background: currentColor; border-radius: 2px;
+    }
+    .shell .center-line {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      width: 4px; height: 38px; top: 0px;
+      background: currentColor; border-radius: 2px;
+    }
+    .glyph-stack { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <div class="max-w-5xl mx-auto py-8 px-4">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold">Conversor de números arábigos → numeración maya</h1>
+    </header>
+    <section class="grid md:grid-cols-2 gap-6 items-start">
+      <div class="bg-white rounded-2xl p-5 shadow">
+        <label for="numero" class="block text-sm font-semibold">Número arábigo</label>
+        <input id="numero" type="number" min="0" step="1" placeholder="Ej. 2025" class="mt-2 w-full rounded-xl border px-3 py-2" value="0"/>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button id="btn-convertir" class="rounded-xl px-4 py-2 bg-indigo-600 text-white">Convertir</button>
+          <button id="btn-limpiar" class="rounded-xl px-4 py-2 bg-slate-100">Limpiar</button>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 shadow">
+        <h2 class="text-xl font-semibold">Resultado</h2>
+        <div id="render" class="mt-4 flex flex-col-reverse gap-6 items-start"></div>
+        <div id="procedimiento" class="mt-6 p-4 bg-slate-50 rounded-xl text-sm text-slate-700 border border-slate-200"></div>
+      </div>
+    </section>
+    <footer class="mt-8 text-center text-slate-600 text-sm">
+        Creado por <strong>Walfre Manolo López Prado</strong> - By <a href="http://plataformasinformaticas.com/">Plataformas Informáticas</a>
+    </footer>
+  </div>
+  <script>
+    const numeroEl = document.getElementById('numero');
+    const renderEl = document.getElementById('render');
+    const procedimientoEl = document.getElementById('procedimiento');
+    const btnConvertir = document.getElementById('btn-convertir');
+
+    function descomponerVigesimal(n) {
+      if (n === 0) return [0];
+      const digits = [];
+      while (n > 0) {
+        digits.push(n % 20);
+        n = Math.floor(n / 20);
+      }
+      return digits;
+    }
+
+    function crearNivel(d, nivel) {
+      const factor = Math.pow(20, nivel);
+      const level = document.createElement('div');
+      level.className = 'maya-level text-slate-900';
+      const stack = document.createElement('div');
+      stack.className = 'glyph-stack';
+
+      if (d === 0) {
+        const shell = document.createElement('div');
+        shell.className = 'shell';
+        shell.title = `Valor 0 (x${factor})`;
+        const centerLine = document.createElement('div');
+        centerLine.className = 'center-line';
+        shell.appendChild(centerLine);
+        stack.appendChild(shell);
+      } else {
+        const bars = Math.floor(d / 5);
+        const dots = d % 5;
+        if (dots > 0) {
+          const dotRow = document.createElement('div');
+          dotRow.style.display = 'flex';
+          dotRow.style.gap = '4px';
+          for (let i = 0; i < dots; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            dot.title = `Valor 1 (x${factor})`;
+            dotRow.appendChild(dot);
+          }
+          stack.appendChild(dotRow);
+        }
+        for (let i = 0; i < bars; i++) {
+          const bar = document.createElement('span');
+          bar.className = 'bar';
+          bar.title = `Valor 5 (x${factor})`;
+          stack.appendChild(bar);
+        }
+      }
+      level.appendChild(stack);
+      return level;
+    }
+
+    function renderizar(digits) {
+      renderEl.innerHTML = '';
+      digits.forEach((d, idx) => {
+        renderEl.appendChild(crearNivel(d, idx));
+      });
+    }
+
+    function mostrarProcedimiento(n, digits) {
+      let procedimiento = `<strong>Procedimiento:</strong><br>`;
+      let valor = n;
+      let base = 20;
+      digits.forEach((digito, idx) => {
+        const cociente = Math.floor(valor / base);
+        const residuo = valor % base;
+        procedimiento += `Nivel ${idx} (valor ${digito}): ${valor} ÷ ${base} = ${cociente} resto ${residuo}<br>`;
+        valor = cociente;
+      });
+      procedimientoEl.innerHTML = procedimiento;
+    }
+
+    numeroEl.addEventListener('keydown', e => { if (e.key === 'Enter') convertir(); });
+    function convertir() {
+      const raw = numeroEl.value.trim();
+      if (raw === '' || Number(raw) < 0 || !Number.isInteger(Number(raw))) {
+        renderEl.innerHTML = '<p class="text-red-600 text-sm">Ingresa un entero ≥ 0.</p>';
+        procedimientoEl.innerHTML = '';
+        return;
+      }
+      let n = Number(raw);
+      const digits = descomponerVigesimal(n);
+      renderizar(digits);
+      mostrarProcedimiento(n, digits);
+    }
+
+    btnConvertir.addEventListener('click', convertir);
+    document.getElementById('btn-limpiar').addEventListener('click', () => {
+        numeroEl.value = '0';
+        convertir();
+        numeroEl.focus();
+      });
+    convertir();
+  </script>
+</body>
+</html>
